@@ -1,30 +1,62 @@
 import os
+from pathlib import Path
 import click
-import chromadb
+from chromadb import HttpClient, PersistentClient, Settings
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 from rich.json import JSON
-from typing import Optional
+from dotenv import load_dotenv
+
+load_dotenv()
 
 console = Console()
 
 
+def load_config():
+    """Load config from .env files with fallbacks"""
+    # try loading from current directory
+    if Path('.env').exists():
+        load_dotenv('.env')
+    # try loading from parent directory
+    elif Path('../.env').exists():
+        load_dotenv('../.env')
+    # try loading from user home directory
+    elif Path.home().joinpath('.eureka-chroma/.env').exists():
+        load_dotenv(Path.home().joinpath('.eureka-chroma/.env'))
+
+
 def get_client():
-    # try http client first, fallback to persistent
-    if os.getenv('CHROMA_URL'):
-        return chromadb.HttpClient(
-            host=os.getenv('CHROMA_HOST', 'localhost'),
-            port=int(os.getenv('CHROMA_PORT', '8000')),
-            ssl=os.getenv('CHROMA_SSL', 'false').lower() == 'true'
+    """Get ChromaDB client"""
+    host = os.getenv('CHROMA_HOST')
+    if not host:
+        console.print(
+            "[yellow]No CHROMA_HOST set, using local persistent storage")
+        return PersistentClient(path="./chroma_data")
+
+    return HttpClient(
+        host=host,
+        port=int(os.getenv('CHROMA_PORT', '8000')),
+        settings=Settings(
+            chroma_client_auth_provider="chromadb.auth.token_authn.TokenAuthClientProvider",
+            chroma_client_auth_credentials="170532191a79caf87fbafa68628de1c14bac661d15652d6e2c69bea22ac9472b",
         )
-    return chromadb.PersistentClient(path="./chroma_data")
+    )
 
 
 @click.group()
-def cli():
+@click.option('--verbose', is_flag=True, help='Enable verbose output')
+@click.pass_context
+def cli(ctx, verbose):
     """ChromaDB Test Bench - Debug and manage collections"""
-    pass
+    ctx.ensure_object(dict)
+    ctx.obj['VERBOSE'] = verbose
+    if verbose:
+        console.print(f"[blue]Environment:[/blue]")
+        console.print(f"CHROMA_URL: {os.getenv('CHROMA_URL')}")
+        console.print(f"CHROMA_HOST: {os.getenv('CHROMA_HOST')}")
+        console.print(f"CHROMA_PORT: {os.getenv('CHROMA_PORT')}")
+        console.print(f"CHROMA_SSL: {os.getenv('CHROMA_SSL')}")
 
 
 @cli.command()

@@ -1,4 +1,4 @@
-chromadb>=0.4.22
-click>=8.1.7
-rich>=13.7.0
-python-dotenv>=1.0.0
+chromadb>=0.5.17
+click
+rich
+python-dotenv

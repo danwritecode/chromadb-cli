@@ -1,9 +1,14 @@
 # Chromadb CLI
 This tool is entirely written by claude sonnet 3.6. 
 
+Create venv with compatible version: 
+```
+python3.12 -m venv venv
+source venv/bin/activate
+```
+
 You just need to create a .env file with the following items: 
 ```
-CHROMA_URL=
 CHROMA_HOST=
 CHROMA_PORT=8000
 CHROMA_SSL=false
