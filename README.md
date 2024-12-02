@@ -20,7 +20,7 @@ CHROMA_SSL=false
 python main.py list
 
 # create a new collection
-python main.py create test_collection --distance cosine
+python main.py create test_collection --embedding-provider openai --embedding-model text-embedding-3-small --distance cosine
 
 # peek at contents
 python main.py peek test_collection --limit 5

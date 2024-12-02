@@ -29,6 +29,7 @@ def load_config():
 def get_client():
     """Get ChromaDB client"""
     host = os.getenv('CHROMA_HOST')
+    token = os.getenv('CHROMA_TOKEN')
     if not host:
         console.print(
             "[yellow]No CHROMA_HOST set, using local persistent storage")
@@ -39,7 +40,7 @@ def get_client():
         port=int(os.getenv('CHROMA_PORT', '8000')),
         settings=Settings(
             chroma_client_auth_provider="chromadb.auth.token_authn.TokenAuthClientProvider",
-            chroma_client_auth_credentials="170532191a79caf87fbafa68628de1c14bac661d15652d6e2c69bea22ac9472b",
+            chroma_client_auth_credentials=token,
         )
     )
 
@@ -62,16 +63,33 @@ def cli(ctx, verbose):
 @cli.command()
 @click.argument('name')
 @click.option('--distance', type=click.Choice(['l2', 'ip', 'cosine']), default='l2', help='Distance metric')
-def create(name: str, distance: str):
-    """Create a new collection"""
+@click.option('--embedding-provider', type=click.Choice(['openai', 'cohere', 'huggingface', 'azure']),
+              default='openai', help='Embedding model provider')
+@click.option('--embedding-model', help='Specific embedding model to use (optional)')
+def create(name: str, distance: str, embedding_provider: str, embedding_model: str):
+    """Create a new collection with specified embedding provider"""
     client = get_client()
+
+    # construct metadata with embedding info
+    metadata = {
+        "hnsw:space": distance,
+        "embedding_provider": embedding_provider,
+    }
+
+    if embedding_model:
+        metadata["embedding_model"] = embedding_model
+
     try:
         collection = client.create_collection(
             name=name,
-            metadata={"hnsw:space": distance}
+            metadata=metadata
         )
-        console.print(f"[green]Created collection '{
-                      name}' with {distance} distance metric")
+        console.print(f"[green]Created collection '{name}':")
+        console.print(f"  Distance metric: {distance}")
+        console.print(f"  Embedding provider: {embedding_provider}")
+        if embedding_model:
+            console.print(f"  Embedding model: {embedding_model}")
+
     except Exception as e:
         console.print(f"[red]Error: {str(e)}")
 
@@ -100,14 +118,14 @@ def list_collections():
 
     table = Table(show_header=True, header_style="bold magenta")
     table.add_column("Name")
-    table.add_column("Distance")
+    # table.add_column("Distance")
     table.add_column("Count")
 
     for col in collections:
         collection = client.get_collection(col.name)
         table.add_row(
             col.name,
-            col.metadata.get("hnsw:space", "l2"),
+            # col.metadata.get("hnsw:space", "l2"),
             str(collection.count())
         )
 
